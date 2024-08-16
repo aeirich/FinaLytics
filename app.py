@@ -5,13 +5,13 @@ pd.set_option('display.width', 1000)
 pd.set_option('display.max_columns', None)
 st.set_page_config(page_title='FinaLytics', layout="wide", initial_sidebar_state="auto", menu_items=None)
 
-with st.sidebar as st:
+with st.sidebar as sb:
 
     st.title('FinaLytics `v1.0`')
 
 
-    uploaded_files = st.file_uploader("Choose a CSV file", accept_multiple_files=True)
-    for uploaded_file in uploaded_files:
-        bytes_data = uploaded_file.read()
-        st.write("filename:", uploaded_file.name)
-        st.write(bytes_data)
+    uploaded_files = st.file_uploader("Lade dein Template hoch", accept_multiple_files=True, type="xlsx")
+
+for uploaded_file in uploaded_files:
+    df = pd.read_excel(uploaded_file)
+    st.write(df)
