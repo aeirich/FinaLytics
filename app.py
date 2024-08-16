@@ -12,6 +12,7 @@ with st.sidebar as sb:
 
     uploaded_files = st.file_uploader("Lade dein Template hoch", accept_multiple_files=True, type="xlsx")
 
-for uploaded_file in uploaded_files:
-    df = pd.read_excel(uploaded_file)
-    st.write(df)
+
+if uploaded_files:
+    for uploaded_file in uploaded_files:
+        df = pd.read_excel(uploaded_file)
