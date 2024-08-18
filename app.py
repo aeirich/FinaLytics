@@ -10,9 +10,8 @@ with st.sidebar as sb:
     st.title('FinaLytics `v1.0`')
 
 
-    uploaded_files = st.file_uploader("Lade dein Template hoch", accept_multiple_files=True, type="xlsx")
-
+    uploaded_files = st.file_uploader("Lade dein Template hoch", type='xlsx')
 
 if uploaded_files:
-    for uploaded_file in uploaded_files:
-        df = pd.read_excel(uploaded_file)
+    df = pd.read_excel(uploaded_files)
+    st.write(df)
