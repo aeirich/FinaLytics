@@ -1,4 +1,6 @@
 import yfinance as yf
+from io import BytesIO
+import pandas as pd
 
 class Wertpapier:
     """Sammelt die Attribute und Methoden von Wertpapieren
@@ -14,26 +16,86 @@ class Wertpapier:
 
     """
     def __init__ (self, ticker):
-        self.ticker = 'ticker'
-        self.isin = None
+        self.ticker = ticker
         self.assetclass = None
         self.name = None
-        self.currency = None
+        self.data = None
+        self.assettyp = None
+        self.load_yf_data()
+        self.get_base_data()
+
+    def load_yf_data(self):
+        import yfinance as yf
+        self.data = yf.Ticker(self.ticker)
+
+    def get_base_data(self):
+        self.isin = self.data.isin
+        self.name = self.data.info['shortName']
+        self.sector = self.data.info['sector']
+        self.industry = self.data.info['industry']
+        self.country = self.data.info['country']
+        self.ccy = self.data.info['currency']
+        self.longBusinessSummary = self.data.info['longBusinessSummary']
+    
+    def get_pricehistory(self, interval='1mo', period='10y'):
+        """
+        params: 
+            interval (str): 1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo
+            period (str): 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
+            startDate (datetime.)
+        """
+        self.pricehistory = self.data.history(interval=interval,period=period)['Close']
+        return self.pricehistory
 
 
 class Template:
-    def __init__ (self):
-        self.excel = None
+    def __init__(self):
+        import pandas as pd
+        self.data = pd.DataFrame({
+            'Yahoo Ticker':['AAPL'],
+            'Kaufpreis':[140.43],
+            'Bestand':[30],
+            'Kaufdatum':['21.03.2023']
+            },index=None)
+
+
+
+    def to_excel(self):
+        # Speichere das DataFrame in einen BytesIO-Stream
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            self.data.to_excel(writer, index=False)
+        return output.getvalue()
+
 
 class Portfolio:
     def __init__ (self, data):
-        self.data = data
-        self.geomeanreturn = None
+        self.data = pd.read_excel(data)
+        self.pf = self.data
+        print('Excel file eingelesen')
+        print(self.data.head())
+        self.geomean_return = None
+        self.portfolio_ccy = None
+
+    def col_book_value(self):
+        if 'Kaufpreis' in self.pf.columns and 'Bestand' in self.pf.columns:
+            self.pf['book_value'] = self.pf['Kaufpreis'] * self.pf['Bestand']
+            print("Spalte 'Marktwert' hinzugefügt.")
+        else:
+            print("Die erforderlichen Spalten 'Price' und 'Menge' fehlen.")
+
 
     def geo_mean_return(self, pct_change_column):
         
         self.geomeanreturn = (((1 + pct_change_column).product()) ** (1 / (len(pct_change_column))) - 1) * 12
         return self.geomeanreturn
+
+    def get_pf(self):
+        """
+        Zeigt das Porfolio bereinigt um nicht benötigte und hinzugefügte Spalten
+        """
+        return self.pf
+
 
 class Charts:
     def __init__(self, title, data):
