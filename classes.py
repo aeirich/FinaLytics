@@ -14,7 +14,7 @@ class Wertpapier:
 
     """
     def __init__ (self, ticker):
-        self.ticker = 'ticker'
+        self.ticker = ticker
         self.isin = None
         self.assetclass = None
         self.name = None
@@ -28,7 +28,8 @@ class Template:
 class Portfolio:
     def __init__ (self, data):
         self.data = data
-        self.geomeanreturn = None
+        self.geomean_return = None
+        self.portfolio_ccy = None
 
     def geo_mean_return(self, pct_change_column):
         
