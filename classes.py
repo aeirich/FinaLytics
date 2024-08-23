@@ -1,4 +1,6 @@
 import yfinance as yf
+from io import BytesIO
+import pandas as pd
 
 class Wertpapier:
     """Sammelt die Attribute und Methoden von Wertpapieren
@@ -15,15 +17,47 @@ class Wertpapier:
     """
     def __init__ (self, ticker):
         self.ticker = ticker
-        self.isin = None
         self.assetclass = None
         self.name = None
-        self.currency = None
+        self.data = None
+        self.assettyp = None
+        self.load_yf_data()
+        self.get_base_data()
+
+    def load_yf_data(self):
+        import yfinance as yf
+        self.data = yf.Ticker(self.ticker)
+
+    def get_base_data(self):
+        self.isin = self.data.isin
+        self.name = self.data.info['shortName']
+        self.sector = self.data.info['sector']
+        self.industry = self.data.info['industry']
+        self.country = self.data.info['country']
+        self.ccy = self.data.info['currency']
+        self.longBusinessSummary = self.data.info['longBusinessSummary']
+
 
 
 class Template:
-    def __init__ (self):
-        self.excel = None
+    def __init__(self):
+        # Initialisiere ein leeres DataFrame mit den gewünschten Spalten
+        import pandas as pd
+        self.data = pd.DataFrame({
+            'Yahoo Ticker':['AAPL'],
+            'Kaufpreis':[140.43],
+            'Bestand':[30],
+            'Kaufdatum':['21.03.2023']
+            },index=None)
+
+
+    def to_excel(self):
+        # Speichere das DataFrame in einen BytesIO-Stream
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            self.data.to_excel(writer, index=False)
+        return output.getvalue()
+
 
 class Portfolio:
     def __init__ (self, data):
@@ -35,6 +69,9 @@ class Portfolio:
         
         self.geomeanreturn = (((1 + pct_change_column).product()) ** (1 / (len(pct_change_column))) - 1) * 12
         return self.geomeanreturn
+
+
+
 
 class Charts:
     def __init__(self, title, data):
