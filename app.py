@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from classes import *
 
 pd.set_option('display.width', 1000)
 pd.set_option('display.max_columns', None)
