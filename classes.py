@@ -36,12 +36,20 @@ class Wertpapier:
         self.country = self.data.info['country']
         self.ccy = self.data.info['currency']
         self.longBusinessSummary = self.data.info['longBusinessSummary']
-
+    
+    def get_pricehistory(self, interval='1mo', period='10y'):
+        """
+        params: 
+            interval (str): 1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo
+            period (str): 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
+            startDate (datetime.)
+        """
+        self.pricehistory = self.data.history(interval=interval,period=period)['Close']
+        return self.pricehistory
 
 
 class Template:
     def __init__(self):
-        # Initialisiere ein leeres DataFrame mit den gewünschten Spalten
         import pandas as pd
         self.data = pd.DataFrame({
             'Yahoo Ticker':['AAPL'],
@@ -49,6 +57,7 @@ class Template:
             'Bestand':[30],
             'Kaufdatum':['21.03.2023']
             },index=None)
+
 
 
     def to_excel(self):
@@ -61,16 +70,31 @@ class Template:
 
 class Portfolio:
     def __init__ (self, data):
-        self.data = data
+        self.data = pd.read_excel(data)
+        self.pf = self.data
+        print('Excel file eingelesen')
+        print(self.data.head())
         self.geomean_return = None
         self.portfolio_ccy = None
+
+    def col_book_value(self):
+        if 'Kaufpreis' in self.pf.columns and 'Bestand' in self.pf.columns:
+            self.pf['book_value'] = self.pf['Kaufpreis'] * self.pf['Bestand']
+            print("Spalte 'Marktwert' hinzugefügt.")
+        else:
+            print("Die erforderlichen Spalten 'Price' und 'Menge' fehlen.")
+
 
     def geo_mean_return(self, pct_change_column):
         
         self.geomeanreturn = (((1 + pct_change_column).product()) ** (1 / (len(pct_change_column))) - 1) * 12
         return self.geomeanreturn
 
-
+    def get_pf(self):
+        """
+        Zeigt das Porfolio bereinigt um nicht benötigte und hinzugefügte Spalten
+        """
+        return self.pf
 
 
 class Charts:

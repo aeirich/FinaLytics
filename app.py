@@ -25,6 +25,16 @@ with st.sidebar as sb:
 
     uploaded_files = st.file_uploader("Lade dein Template hoch", type='xlsx')
 
+
+
 if uploaded_files:
-    df = pd.read_excel(uploaded_files)
-    st.write(df)
+    df = Portfolio(uploaded_files)
+    st.write(df.get_pf())
+    df.col_book_value()
+
+
+#x = Wertpapier('AAPL')
+#y=x.get_pricehistory(interval='1d', period='max')
+#st.write(y)
+
+
