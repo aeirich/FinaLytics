@@ -30,8 +30,6 @@ cycler
 dateutils
 decorator
 defusedxml
-duckdb
-empyrical
 entrypoints
 et-xmlfile
 exceptiongroup
