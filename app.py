@@ -28,13 +28,29 @@ with st.sidebar as sb:
 
 
 if uploaded_files:
-    df = Portfolio(uploaded_files)
-    st.write(df.get_pf())
-    df.col_book_value()
+
+    tab1, tab2 = st.tabs(['Gesamtübersicht', 'Einzeltitel'])
+
+    with tab1:
+
+        df = Portfolio(uploaded_files)
+        df.prepare_df()
+        df = df.get_pf()
+        st.write(df)
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+
+            PieChart('Einzeltitel',df,'marketvalue','name').plot()
+
+            PieChart('Währungen',df,'marketvalue','ccy').plot()
+
+        with col2:
+
+            BarChart('Performance',df,'performance','name', orientation='vertical').plot()
+
+            PieChart('Asset-Klassen',df,'marketvalue','assetclass').plot()
 
 
-#x = Wertpapier('AAPL')
-#y=x.get_pricehistory(interval='1d', period='max')
-#st.write(y)
-
-
+        HeatmapChart('Heatmap', df, 'assetclass', 'ccy', 'performance').plot()
