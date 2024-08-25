@@ -1,6 +1,43 @@
 import yfinance as yf
 from io import BytesIO
 import pandas as pd
+import plotly.express as px
+import streamlit as st
+import numpy as np
+import plotly.graph_objects as go
+
+def colorset():
+    color_dict = {
+       'darkorange':'rgb(255,140,0)',
+       'darkorange4':'rgb(139,69,0)',
+       'gold':'rgb(255,215,0)',
+       'PeachPuff':'rgb(255,218,185)',
+       'honeydew3':'rgb(193,205,193)',
+       'lightpink3':'rgb(205,140,149)',
+       'orangered':'rgb(255,69,0)',
+       'gold':'rgb(255,215,0)'}
+    colors = list(color_dict.values())
+    return colors
+
+
+class Template:
+    def __init__(self):
+        import pandas as pd
+        self.data = pd.DataFrame({
+            'Yahoo Ticker':['AAPL','XS2689948078.SG','MSE.PA'],
+            'Kaufpreis':[140.43, 150.32,100],
+            'Bestand':[30,1000,100],
+            'Kaufdatum':['21.03.2023','21.03.2023','21.03.2022'],
+            'Anlageklasse':['Aktien','Anleihen','Aktien-ETF']},index=None)
+
+    def to_excel(self):
+        # Speichere das DataFrame in einen BytesIO-Stream
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            self.data.to_excel(writer, index=False)
+        return output.getvalue()
+    
+
 
 class Wertpapier:
     """Sammelt die Attribute und Methoden von Wertpapieren
@@ -18,7 +55,6 @@ class Wertpapier:
     def __init__ (self, ticker):
         self.ticker = ticker
         self.assetclass = None
-        self.name = None
         self.data = None
         self.assettyp = None
         self.load_yf_data()
@@ -29,13 +65,16 @@ class Wertpapier:
         self.data = yf.Ticker(self.ticker)
 
     def get_base_data(self):
-        self.isin = self.data.isin
-        self.name = self.data.info['shortName']
-        self.sector = self.data.info['sector']
-        self.industry = self.data.info['industry']
-        self.country = self.data.info['country']
-        self.ccy = self.data.info['currency']
-        self.longBusinessSummary = self.data.info['longBusinessSummary']
+        self.isin = self.data.isin if self.data.isin else None
+        self.name = self.data.info.get('shortName',None)
+        self.longname = self.data.info.get('longName',None)
+        self.sector = self.data.info.get('sector',None)
+        self.industry = self.data.info.get('industry',None)
+        self.country = self.data.info.get('country')
+        self.ccy = self.data.info.get('currency')
+        self.longBusinessSummary = self.data.info.get('longBusinessSummary',None)
+        self.price = self.data.info.get('previousClose',None)
+        self.beta = self.data.info.get('beta',None)
     
     def get_pricehistory(self, interval='1mo', period='10y'):
         """
@@ -48,26 +87,6 @@ class Wertpapier:
         return self.pricehistory
 
 
-class Template:
-    def __init__(self):
-        import pandas as pd
-        self.data = pd.DataFrame({
-            'Yahoo Ticker':['AAPL'],
-            'Kaufpreis':[140.43],
-            'Bestand':[30],
-            'Kaufdatum':['21.03.2023']
-            },index=None)
-
-
-
-    def to_excel(self):
-        # Speichere das DataFrame in einen BytesIO-Stream
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            self.data.to_excel(writer, index=False)
-        return output.getvalue()
-
-
 class Portfolio:
     def __init__ (self, data):
         self.data = pd.read_excel(data)
@@ -77,12 +96,29 @@ class Portfolio:
         self.geomean_return = None
         self.portfolio_ccy = None
 
-    def col_book_value(self):
-        if 'Kaufpreis' in self.pf.columns and 'Bestand' in self.pf.columns:
-            self.pf['book_value'] = self.pf['Kaufpreis'] * self.pf['Bestand']
-            print("Spalte 'Marktwert' hinzugefügt.")
-        else:
-            print("Die erforderlichen Spalten 'Price' und 'Menge' fehlen.")
+
+
+    def prepare_df(self):
+            
+        self.pf.rename(columns={'Yahoo Ticker':'ticker', 'Kaufdatum':'purchasedate','Kaufpreis':'bookprice', 'Bestand':'amount', 'Anlageklasse':'assetclass'},inplace=True)
+        self.pf['purchasedate'] = pd.to_datetime(self.pf['purchasedate']).dt.date
+        self.wertpapiere = [Wertpapier(ticker) for ticker in self.pf['ticker']]
+
+        self.pf['isin'] = [wp.isin for wp in self.wertpapiere]
+        self.pf['name'] = [wp.name for wp in self.wertpapiere]
+        self.pf['current_price'] = [wp.price for wp in self.wertpapiere]
+        self.pf['ccy'] = [wp.ccy for wp in self.wertpapiere]
+        self.pf['industry'] = [wp.industry for wp in self.wertpapiere]
+        self.pf['beta'] = [wp.beta for wp in self.wertpapiere]
+        self.pf['country'] = [wp.country for wp in self.wertpapiere]
+        
+        # Berechnung des aktuellen Werts
+        self.pf['bookvalue'] = np.where(self.pf['ticker'].str.contains('.SG'),self.pf['bookprice'] * self.pf['amount'] * 0.01, self.pf['bookprice'] * self.pf['amount'])
+        self.pf['marketvalue'] = np.where(self.pf['ticker'].str.contains('.SG'),self.pf['current_price'] * self.pf['amount'] * 0.01, self.pf['current_price'] * self.pf['amount'])
+
+        # Berechnung der Performance
+        self.pf['performance'] = (self.pf['marketvalue'] - self.pf['bookvalue']) / self.pf['bookvalue']
+
 
 
     def geo_mean_return(self, pct_change_column):
@@ -97,31 +133,101 @@ class Portfolio:
         return self.pf
 
 
+
 class Charts:
     def __init__(self, title, data):
         self.title = title
         self.data = data
-    
-    def display(self):
-        print(f"Anzeigen des Charts: {self.title}")
+        self.colorset = colorset()
+
+    def colors(self, values):
+        """Gibt eine Liste von Farben basierend auf den Werten zurück."""
+        return ['green' if x >= 0 else 'red' for x in values]
+
+    def plot(self):
+        raise NotImplementedError("Subklassen müssen die plot-Methode implementieren.")
     
     def update_data(self, new_data):
         self.data = new_data
 
 class PieChart(Charts):
-    def __init__(self, title, data, colors):
+    def __init__(self, title, data, values, category):
         super().__init__(title, data)
-        self.colors = colors
+        self.values = values
+        self.category = category
     
-    def display(self):
-        super().display()
+    def plot(self):
+        # Erstellen des Kreisdiagramms
+        fig = px.pie(self.data, values=self.values, names=self.category, title=self.title, color_discrete_sequence=self.colorset)
+        fig.update_layout(width=600, height=400)
+        st.plotly_chart(fig)
+
         print("Anzeigen als Kreisdiagramm")
 
 class BarChart(Charts):
-    def __init__(self, title, data, orientation='vertical'):
+    def __init__(self, title, data, value, category, orientation='vertical'):
         super().__init__(title, data)
+        self.value = value
+        self.category = category
         self.orientation = orientation
-    
-    def display(self):
-        super().display()
+
+    def plot(self):
+        # Farben auf die Daten anwenden
+        colors = self.colors(self.data[self.value])
+        
+        # Erstellen des Balkendiagramms
+        fig = px.bar(self.data,
+                     y=self.value if self.orientation == 'vertical' else self.category,
+                     x=self.category if self.orientation == 'vertical' else self.value,
+                     title=self.title)
+        fig.update_traces(marker=dict(color=colors))
+        width = 500 if self.orientation == 'vertical' else 250
+        height = 500 if self.orientation == 'horizontal' else 250
+        fig.update_layout(width=width, height=height, xaxis={'categoryorder': 'total descending'})
+        st.plotly_chart(fig)
+        
         print(f"Anzeigen als Balkendiagramm mit {self.orientation} Ausrichtung")
+
+
+class HeatmapChart(Charts):
+    def __init__(self, title, data, x_category, y_category, value):
+        super().__init__(title, data)
+        self.x_category = x_category
+        self.y_category = y_category
+        self.value = value
+        self.grouped_data = None
+
+    def prepare_data(self, aggregation='mean', bins=None):
+        if bins:
+            self.data[f'{self.x_category}_bin'] = pd.cut(self.data[self.x_category], bins=bins)
+            self.data[f'{self.y_category}_bin'] = pd.cut(self.data[self.y_category], bins=bins)
+            x_category, y_category = f'{self.x_category}_bin', f'{self.y_category}_bin'
+        else:
+            x_category, y_category = self.x_category, self.y_category
+
+        grouped = self.data.groupby([x_category, y_category])[self.value].agg(aggregation).reset_index()
+        self.grouped_data = grouped.pivot(index=y_category, columns=x_category, values=self.value)
+
+    def plot(self):
+        if self.grouped_data is None:
+            self.prepare_data()
+
+        fig = go.Figure(data=go.Heatmap(
+            z=self.grouped_data.values,
+            x=self.grouped_data.columns,
+            y=self.grouped_data.index,
+            colorscale='RdYlGn',
+            hoverongaps=True
+        ))
+
+        fig.update_layout(
+            title=self.title,
+            xaxis_title=self.x_category,
+            yaxis_title=self.y_category,
+            width=800,
+            height=600
+        )
+
+        st.plotly_chart(fig)
+
+        print("Anzeigen als Heatmap")
