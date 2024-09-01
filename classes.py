@@ -151,9 +151,9 @@ class Charts:
         self.data = new_data
 
 class PieChart(Charts):
-    def __init__(self, title, data, values, category):
+    def __init__(self, title, data, category, values):
         super().__init__(title, data)
-        self.values = values
+        self.values = values #TODO testen in dekalytics df[col] = df[col].clip(lower=0)
         self.category = category
     
     def plot(self):
@@ -165,20 +165,20 @@ class PieChart(Charts):
         print("Anzeigen als Kreisdiagramm")
 
 class BarChart(Charts):
-    def __init__(self, title, data, value, category, orientation='vertical'):
+    def __init__(self, title, data, category, values, orientation='vertical'):
         super().__init__(title, data)
-        self.value = value
+        self.values = values
         self.category = category
         self.orientation = orientation
 
     def plot(self):
         # Farben auf die Daten anwenden
-        colors = self.colors(self.data[self.value])
+        colors = self.colors(self.data[self.values])
         
         # Erstellen des Balkendiagramms
         fig = px.bar(self.data,
-                     y=self.value if self.orientation == 'vertical' else self.category,
-                     x=self.category if self.orientation == 'vertical' else self.value,
+                     y=self.values if self.orientation == 'vertical' else self.category,
+                     x=self.category if self.orientation == 'vertical' else self.values,
                      title=self.title)
         fig.update_traces(marker=dict(color=colors))
         width = 500 if self.orientation == 'vertical' else 250
@@ -190,11 +190,11 @@ class BarChart(Charts):
 
 
 class HeatmapChart(Charts):
-    def __init__(self, title, data, x_category, y_category, value):
+    def __init__(self, title, data, x_category, y_category, values):
         super().__init__(title, data)
         self.x_category = x_category
         self.y_category = y_category
-        self.value = value
+        self.values = values
         self.grouped_data = None
 
     def prepare_data(self, aggregation='mean', bins=None):
@@ -205,8 +205,8 @@ class HeatmapChart(Charts):
         else:
             x_category, y_category = self.x_category, self.y_category
 
-        grouped = self.data.groupby([x_category, y_category])[self.value].agg(aggregation).reset_index()
-        self.grouped_data = grouped.pivot(index=y_category, columns=x_category, values=self.value)
+        grouped = self.data.groupby([x_category, y_category])[self.values].agg(aggregation).reset_index()
+        self.grouped_data = grouped.pivot(index=y_category, columns=x_category, values=self.values)
 
     def plot(self):
         if self.grouped_data is None:
@@ -231,3 +231,19 @@ class HeatmapChart(Charts):
         st.plotly_chart(fig)
 
         print("Anzeigen als Heatmap")
+
+
+class IcicleChart(Charts):
+    def __init__(self, title, data, list_categories, values):
+        super().__init__(title, data)
+        self.values = values #TODO testen in dekalytics df[col] = df[col].clip(lower=0)
+        self.category = [list_categories]
+    
+    def plot(self):
+        self.category = self.category.insert(0,px.Constant("Gesamt"))
+        fig = px.icicle(self.data, values=self.values, path=self.category, title=self.title, color_discrete_sequence=self.colorset)
+        fig.update_traces(root_color="lightgrey")
+        fig.update_layout(width=600, height=400)
+        st.plotly_chart(fig)
+
+        print("Anzeigen als Icicle")

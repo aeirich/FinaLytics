@@ -42,15 +42,19 @@ if uploaded_files:
 
         with col1:
 
-            PieChart('Einzeltitel',df,'marketvalue','name').plot()
+            PieChart('Einzeltitel',df,values='marketvalue',category='name').plot()
 
-            PieChart('Währungen',df,'marketvalue','ccy').plot()
+            PieChart('Währungen',df,'ccy','marketvalue').plot()
 
         with col2:
 
-            BarChart('Performance',df,'performance','name', orientation='vertical').plot()
+            BarChart('Performance',df,'name','performance', orientation='vertical').plot()
 
-            PieChart('Asset-Klassen',df,'marketvalue','assetclass').plot()
+            PieChart('Asset-Klassen',df,'assetclass','marketvalue').plot()
 
 
         HeatmapChart('Heatmap', df, 'assetclass', 'ccy', 'performance').plot()
+
+        path = ['ccy', 'assetclass']
+        
+        IcicleChart('Icicle', df, path, 'performance').plot()
