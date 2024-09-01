@@ -93,8 +93,6 @@ class Portfolio:
     def __init__ (self, data):
         self.data = pd.read_excel(data)
         self.pf = self.data
-        print('Excel file eingelesen')
-        print(self.data.head())
         self.geomean_return = None
         self.portfolio_ccy = 'EUR'
 
@@ -147,29 +145,28 @@ class Portfolio:
         quotes = pd.DataFrame()
         tmp_min_dates = pd.DataFrame()
         min_dates=[]
-
         print('Daten werden heruntergeladen und aufbereitet....')
 
         for ticker in self.pf['ticker']:
             print(ticker)
             try:
-
                 i = Wertpapier(ticker)
-                print(ticker)
-                print(i.name)
-                print(quotes)
+                print('Name: ',i.name)
+                print('quotes vorher: ', quotes)
                 quotes.insert(loc=len(quotes.columns), column=i.name, value=i.get_pricehistory(interval='1d',period='5y'))
+                print('quotes nachher: ', quotes)
                 tmp_min_dates=quotes
                 min_dates.append(tmp_min_dates.index.min().to_pydatetime().date())
+                #quotes.dropna(inplace=True)
                 # monthly_quotes=quotes.resample('M').agg(lambda x: x[-1])
             except Exception as err:
                 print('Error: ', err)
-                print('Security: ', i)
+                print('Security: ', i.name)
                 continue
-        #quotes.dropna(inplace=True)
-        monthly_quotes_ForCCY = quotes.resample('BME').last()
-        print('Daten verfügbar....')
+        monthly_quotes_ForCCY = quotes.resample('BM').last()
         return monthly_quotes_ForCCY
+
+        print('Daten verfügbar....')
 
 
 class Charts:
@@ -226,7 +223,6 @@ class BarChart(Charts):
         
         print(f"Anzeigen als Balkendiagramm mit {self.orientation} Ausrichtung")
 
-
 class HeatmapChart(Charts):
     def __init__(self, title, data, x_category, y_category, values):
         super().__init__(title, data)
@@ -270,8 +266,8 @@ class HeatmapChart(Charts):
 
         print("Anzeigen als Heatmap")
 
-
 class IcicleChart(Charts):
+
     def __init__(self, title, data, list_categories, values):
         super().__init__(title, data)
         self.values = values #TODO testen in dekalytics df[col] = df[col].clip(lower=0)
@@ -290,3 +286,11 @@ class IcicleChart(Charts):
         st.plotly_chart(fig)
 
         print("Anzeigen als Icicle")
+
+
+data = Portfolio('FinaLytics_Template_TR.xlsx')
+data.prepare_df()
+df = data.get_pf()
+quotes = data.get_quotes()
+print(quotes)
+#print(data.data.ticker)

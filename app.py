@@ -32,7 +32,7 @@ if uploaded_files:
     pf = Portfolio(uploaded_files)
     pf.prepare_df()
     pf.key_statistics()
-    
+
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
@@ -46,9 +46,10 @@ if uploaded_files:
     with tab1:
 
 
-        df = pf.get_pf()
-        st.write(df)
+        quotes = pf.get_quotes()
+        st.write(quotes)
 
+        df = pf.get_pf()
 
         col1, col2 = st.columns(2)
 
@@ -58,15 +59,18 @@ if uploaded_files:
 
             PieChart('Währungen',df,'ccy','marketvalue').plot()
 
+            HeatmapChart('Heatmap', df, 'assetclass', 'ccy', 'performance').plot()
+
         with col2:
 
             BarChart('Performance',df,'name','performance', orientation='vertical').plot()
 
             PieChart('Asset-Klassen',df,'assetclass','marketvalue').plot()
 
-
-        HeatmapChart('Heatmap', df, 'assetclass', 'ccy', 'performance').plot()
-
-        path = ['ccy', 'assetclass']
+            path = ['ccy', 'assetclass', 'name']
         
-        IcicleChart('Icicle', df, path, 'performance').plot()
+            IcicleChart('Icicle Test', df, path, 'marketvalue').plot()
+
+
+        
+
