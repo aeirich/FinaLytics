@@ -25,6 +25,7 @@ class Template:
         import pandas as pd
         self.data = pd.DataFrame({
             'Yahoo Ticker':['AAPL','XS2689948078.SG','MSE.PA'],
+            'Name (Optional)':['Apple Inc.','6,375% Rumänien 23/33','Amundi EURO STOXX 50 II UCITS ETF Acc'],
             'Kaufpreis':[140.43, 150.32,100],
             'Bestand':[30,1000,100],
             'Kaufdatum':['21.03.2023','21.03.2023','21.03.2022'],
@@ -94,18 +95,17 @@ class Portfolio:
         print('Excel file eingelesen')
         print(self.data.head())
         self.geomean_return = None
-        self.portfolio_ccy = None
-
+        self.portfolio_ccy = 'EUR'
 
 
     def prepare_df(self):
             
-        self.pf.rename(columns={'Yahoo Ticker':'ticker', 'Kaufdatum':'purchasedate','Kaufpreis':'bookprice', 'Bestand':'amount', 'Anlageklasse':'assetclass'},inplace=True)
+        self.pf.rename(columns={'Yahoo Ticker':'ticker','Name (Optional)':'name','Kaufdatum':'purchasedate','Kaufpreis':'bookprice', 'Bestand':'amount', 'Anlageklasse':'assetclass'},inplace=True)
         self.pf['purchasedate'] = pd.to_datetime(self.pf['purchasedate']).dt.date
         self.wertpapiere = [Wertpapier(ticker) for ticker in self.pf['ticker']]
 
         self.pf['isin'] = [wp.isin for wp in self.wertpapiere]
-        self.pf['name'] = [wp.name for wp in self.wertpapiere]
+        self.pf['name'] = [self.pf['name'][i] if i < len(self.pf['name']) else wp.name for i, wp in enumerate(self.wertpapiere)]
         self.pf['current_price'] = [wp.price for wp in self.wertpapiere]
         self.pf['ccy'] = [wp.ccy for wp in self.wertpapiere]
         self.pf['industry'] = [wp.industry for wp in self.wertpapiere]
@@ -118,8 +118,15 @@ class Portfolio:
 
         # Berechnung der Performance
         self.pf['performance'] = (self.pf['marketvalue'] - self.pf['bookvalue']) / self.pf['bookvalue']
+        self.pf['weights'] = (self.pf['bookvalue'] / self.pf['bookvalue'].sum())
 
-
+    def key_statistics(self):
+        try:
+            self.marketvalue = self.pf['marketvalue'].sum()
+            self.bookvalue = self.pf['bookvalue'].sum()
+            self.totalreturn = self.pf['performance'].dot(self.pf['weights']).sum()
+        except:
+            return 'Führe zuerst Porfolio.prepare_df aus'
 
     def geo_mean_return(self, pct_change_column):
         
@@ -130,8 +137,34 @@ class Portfolio:
         """
         Zeigt das Porfolio bereinigt um nicht benötigte und hinzugefügte Spalten
         """
+        
         return self.pf
 
+    def get_quotes(self):
+        from datetime import datetime 
+
+        quotes = pd.DataFrame()
+        tmp_min_dates = pd.DataFrame()
+        min_dates=[]
+
+        print('Daten werden heruntergeladen und aufbereitet....')
+
+        for i in ticker:
+            try:
+
+                quotes.insert(loc=len(quotes.columns), column=i, value=getQuote(i, beg, end, '1d'))
+                tmp_min_dates=quotes
+                min_dates.append(tmp_min_dates.index.min().to_pydatetime().date())
+                quotes.dropna(inplace=True)
+                # monthly_quotes=quotes.resample('M').agg(lambda x: x[-1])
+                monthly_quotes_ForCCY = quotes.resample('BM').last()
+            except Exception as err:
+                print('Error: ', err)
+                print('Security: ', i)
+                sys.exit(0)
+
+
+        print('Daten verfügbar....')
 
 
 class Charts:

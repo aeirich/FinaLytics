@@ -29,14 +29,26 @@ with st.sidebar as sb:
 
 if uploaded_files:
 
+    pf = Portfolio(uploaded_files)
+    pf.prepare_df()
+    pf.key_statistics()
+    
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric(label='Gesamtwert: ', value=f'{round(pf.marketvalue, 2)} €', delta=(f'{round((pf.marketvalue - pf.bookvalue),2)} €'), delta_color='normal')
+
+    with col2:
+        st.metric(label = 'Total Return', value=f'{round(pf.totalreturn*100,2)} %')
+
     tab1, tab2 = st.tabs(['Gesamtübersicht', 'Einzeltitel'])
 
     with tab1:
 
-        df = Portfolio(uploaded_files)
-        df.prepare_df()
-        df = df.get_pf()
+
+        df = pf.get_pf()
         st.write(df)
+
 
         col1, col2 = st.columns(2)
 
