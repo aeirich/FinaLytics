@@ -74,5 +74,4 @@ if uploaded_files:
             IcicleChart('Icicle Test', df, path, 'marketvalue').plot()
 
 
-        
-
+        LineChart('Line Chart',quotes,y_values=quotes.columns,x_values=quotes.index).plot()

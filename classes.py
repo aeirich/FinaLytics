@@ -253,6 +253,21 @@ class PieChart(Charts):
 
         print("Anzeigen als Kreisdiagramm")
 
+class LineChart(Charts):
+    def __init__(self, title, data, x_values, y_values):
+        super().__init__(title, data)
+        self.x_values = x_values #TODO testen in dekalytics df[col] = df[col].clip(lower=0)
+        self.y_values = y_values
+    
+    def plot(self):
+        # Erstellen des LineCharts
+        fig = px.line(self.data, x=self.x_values, y=self.y_values, markers=True)
+        fig.update_layout(width=800, height=600)
+        fig.update_traces(textposition="bottom right")
+        st.plotly_chart(fig)
+
+        print("Anzeigen als Kreisdiagramm")
+
 class BarChart(Charts):
     def __init__(self, title, data, category, values, orientation='vertical'):
         super().__init__(title, data)
@@ -276,7 +291,6 @@ class BarChart(Charts):
         st.plotly_chart(fig)
         
         print(f"Anzeigen als Balkendiagramm mit {self.orientation} Ausrichtung")
-
 
 class HeatmapChart(Charts):
     def __init__(self, title, data, x_category, y_category, values):
@@ -320,7 +334,6 @@ class HeatmapChart(Charts):
         st.plotly_chart(fig)
 
         print("Anzeigen als Heatmap")
-
 
 class IcicleChart(Charts):
     def __init__(self, title, data, list_categories, values):
