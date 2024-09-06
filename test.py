@@ -6,6 +6,12 @@ import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
 import sys
+from currency_converter import CurrencyConverter
+from datetime import timedelta
+
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', None)
+pd.set_option('display.width', 1000)
 
 def colorset():
     color_dict = {
@@ -78,14 +84,17 @@ class Wertpapier:
         self.price = self.data.info.get('previousClose',None)
         self.beta = self.data.info.get('beta',None)
     
-    def get_pricehistory(self, interval='1mo', period='10y'):
+    def get_pricehistory(self, interval='1d', period='5y'):
         """
         params: 
             interval (str): 1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo
             period (str): 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
             startDate (datetime.)
         """
-        self.pricehistory = self.data.history(interval=interval,period=period)['Close']
+        self.pricehistory = pd.DataFrame(self.data.history(interval=interval,period=period)['Close'])
+        #self.pricehistory.index = self.pricehistory.index.strftime('%Y-%m-%d')
+        #self.pricehistory.index = pd.to_datetime(self.pricehistory.index).strftime('%Y-%m-%d')
+
         return self.pricehistory
 
 
@@ -139,7 +148,13 @@ class Portfolio:
         
         return self.pf
 
-    def get_quotes(self):
+    def get_quotes(self, foreignCurrency=False):
+        """
+        params:
+        foreignCurrency (boolean): False = Download in EUR / True = Download in Original Currency (FC = Foreign Currency / DC = Domestic Currency)
+                Defines whether the quotes should be downloaded in Original Currency oder in EUR.
+        period (str): 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
+        """
         from datetime import datetime 
 
         quotes = pd.DataFrame()
@@ -148,25 +163,69 @@ class Portfolio:
         print('Daten werden heruntergeladen und aufbereitet....')
 
         for ticker in self.pf['ticker']:
-            print(ticker)
             try:
                 i = Wertpapier(ticker)
-                print('Name: ',i.name)
-                print('quotes vorher: ', quotes)
-                quotes.insert(loc=len(quotes.columns), column=i.name, value=i.get_pricehistory(interval='1d',period='5y'))
-                print('quotes nachher: ', quotes)
-                tmp_min_dates=quotes
-                min_dates.append(tmp_min_dates.index.min().to_pydatetime().date())
-                #quotes.dropna(inplace=True)
-                # monthly_quotes=quotes.resample('M').agg(lambda x: x[-1])
+                price_history = i.get_pricehistory(interval='1d', period='5y')
+                price_history.index = pd.to_datetime(price_history.index).date
+                price_history = price_history.rename(columns={'Close': i.ticker})
+
+                if quotes.empty:
+                    quotes = price_history
+                else:
+                    quotes = quotes.join(price_history, how='outer')
             except Exception as err:
                 print('Error: ', err)
                 print('Security: ', i.name)
                 continue
-        monthly_quotes_ForCCY = quotes.resample('BM').last()
-        return monthly_quotes_ForCCY
+        quotes.index = pd.to_datetime(quotes.index)
+        monthly_quotes_FC = quotes.resample('BME').last()
+
+        if foreignCurrency==False:
+
+            #-------------- Download Währungen --------------------------------
+
+            currencies = self.pf['ccy'].drop_duplicates()
+            c = CurrencyConverter()
+            df_CCY = pd.DataFrame()
+
+            for ccy in currencies:
+                fx_rates = []
+                for day in monthly_quotes_FC.index.date:
+                    success = False
+                    try_day = day  # Starte mit dem aktuellen Tag
+                    while not success:
+                        try:
+                            x = c.convert(1, 'EUR', ccy, try_day)
+                            fx_rates.append(x)
+                            success = True  # Wert erfolgreich gefunden, Schleife verlassen
+                        except:
+                            try_day -= timedelta(days=1)  # Einen Tag zurückgehen und erneut versuchen
+                            if try_day < monthly_quotes_FC.index.date[0]:  # Vermeide unendliche Schleifen
+                                fx_rates.append(None)  # Kein gültiger Wert gefunden
+                                success = True
+                                break
+
+                fx_rates_ = pd.Series(fx_rates, index=monthly_quotes_FC.index.date)
+                df_CCY.insert(loc=len(df_CCY.columns),column=ccy,value=fx_rates)
+
+            df_CCY.index=monthly_quotes_FC.index.date
+
+            # --------------Calculate Domestic Return ----------------------
+            monthly_quotes_DC = pd.DataFrame()
+            monthly_quotes_data = monthly_quotes_FC.join(df_CCY,how='outer')
+            for i in self.pf['ticker']:
+                ccy = (self.pf.loc[self.pf['ticker']==i,['ccy']].values)[0][0]
+                try:
+                    monthly_quotes_DC[str(i)] = monthly_quotes_data[i]/monthly_quotes_data[ccy]
+                except Exception as err:
+                    print('Error: ', err)
+                    continue
 
         print('Daten verfügbar....')
+
+        return monthly_quotes_DC if foreignCurrency==False else monthly_quotes_FC
+
+        
 
 
 class Charts:
@@ -288,9 +347,10 @@ class IcicleChart(Charts):
         print("Anzeigen als Icicle")
 
 
-data = Portfolio('FinaLytics_Template_TR.xlsx')
+data = Portfolio('FinaLytics_Template_Test.xlsx')
 data.prepare_df()
 df = data.get_pf()
-quotes = data.get_quotes()
-print(quotes)
-#print(data.data.ticker)
+
+quotes = data.get_quotes(True)
+
+print(quotes.head(5))

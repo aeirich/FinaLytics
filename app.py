@@ -45,11 +45,13 @@ if uploaded_files:
 
     with tab1:
 
-
-        quotes = pf.get_quotes()
-        st.write(quotes)
-
         df = pf.get_pf()
+
+        st.write(df)
+
+        quotes = pf.get_quotes(period='1y', foreignCurrency=False)
+
+        st.write(quotes)
 
         col1, col2 = st.columns(2)
 
