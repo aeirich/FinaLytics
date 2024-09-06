@@ -260,8 +260,9 @@ class LineChart(Charts):
         self.y_values = y_values
     
     def plot(self):
+
         # Erstellen des LineCharts
-        fig = px.line(self.data, x=self.x_values, y=self.y_values, markers=True)
+        fig = px.line(self.data, x=self.x_values, y=self.y_values, markers=True,color_discrete_sequence=self.colorset)
         fig.update_layout(width=800, height=600)
         fig.update_traces(textposition="bottom right")
         st.plotly_chart(fig)

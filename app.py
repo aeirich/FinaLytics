@@ -49,7 +49,7 @@ if uploaded_files:
 
         st.write(df)
 
-        quotes = pf.get_quotes(period='1y', foreignCurrency=False)
+        quotes = pf.get_quotes(period='5y', foreignCurrency=False)
 
         st.write(quotes)
 
@@ -74,4 +74,5 @@ if uploaded_files:
             IcicleChart('Icicle Test', df, path, 'marketvalue').plot()
 
 
-        LineChart('Line Chart',quotes,y_values=quotes.columns,x_values=quotes.index).plot()
+        quotes_indexed = (quotes / quotes.iloc[0]) * 100
+        LineChart('Line Chart',quotes_indexed,y_values=quotes_indexed.columns,x_values=quotes_indexed.index).plot()
