@@ -224,9 +224,11 @@ class Portfolio:
 
 
 class Charts:
-    def __init__(self, title, data):
+    def __init__(self, title, data, width=800, height=600):
         self.title = title
         self.data = data
+        self.width = width
+        self.heigth = height
         self.colorset = colorset()
 
     def colors(self, values):
@@ -240,41 +242,47 @@ class Charts:
         self.data = new_data
 
 class PieChart(Charts):
-    def __init__(self, title, data, category, values):
+    def __init__(self, title, data, category, values, width=800, height=600):
         super().__init__(title, data)
         self.values = values #TODO testen in dekalytics df[col] = df[col].clip(lower=0)
         self.category = category
+        self.width = width
+        self.heigth = height
     
     def plot(self):
         # Erstellen des Kreisdiagramms
         fig = px.pie(self.data, values=self.values, names=self.category, title=self.title, color_discrete_sequence=self.colorset)
-        fig.update_layout(width=800, height=600)
+        fig.update_layout(width=self.width, height=self.heigth)
         st.plotly_chart(fig)
 
         print("Anzeigen als Kreisdiagramm")
 
 class LineChart(Charts):
-    def __init__(self, title, data, x_values, y_values):
+    def __init__(self, title, data, x_values, y_values, width=800, height=600):
         super().__init__(title, data)
         self.x_values = x_values #TODO testen in dekalytics df[col] = df[col].clip(lower=0)
         self.y_values = y_values
+        self.width = width
+        self.heigth = height
     
     def plot(self):
 
         # Erstellen des LineCharts
         fig = px.line(self.data, x=self.x_values, y=self.y_values, markers=True,color_discrete_sequence=self.colorset)
-        fig.update_layout(width=800, height=600)
+        fig.update_layout(width=self.width, height=self.heigth)
         fig.update_traces(textposition="bottom right")
         st.plotly_chart(fig)
 
         print("Anzeigen als Kreisdiagramm")
 
 class BarChart(Charts):
-    def __init__(self, title, data, category, values, orientation='vertical'):
+    def __init__(self, title, data, category, values, width=800, height=600, orientation='vertical'):
         super().__init__(title, data)
         self.values = values
         self.category = category
         self.orientation = orientation
+        self.width = width
+        self.heigth = height
 
     def plot(self):
         # Farben auf die Daten anwenden
@@ -286,20 +294,22 @@ class BarChart(Charts):
                      x=self.category if self.orientation == 'vertical' else self.values,
                      title=self.title)
         fig.update_traces(marker=dict(color=colors))
-        width = 800 if self.orientation == 'vertical' else 600
-        height = 800 if self.orientation == 'horizontal' else 600
+        width = self.width if self.orientation == 'vertical' else self.heigth
+        height = self.width if self.orientation == 'horizontal' else self.heigth
         fig.update_layout(width=width, height=height, xaxis={'categoryorder': 'total descending'})
         st.plotly_chart(fig)
         
         print(f"Anzeigen als Balkendiagramm mit {self.orientation} Ausrichtung")
 
 class HeatmapChart(Charts):
-    def __init__(self, title, data, x_category, y_category, values):
+    def __init__(self, title, data, x_category, y_category, values, width=800, height=600):
         super().__init__(title, data)
         self.x_category = x_category
         self.y_category = y_category
         self.values = values
         self.grouped_data = None
+        self.width = width
+        self.heigth = height
 
     def prepare_data(self, aggregation='mean', bins=None):
         if bins:
@@ -328,8 +338,8 @@ class HeatmapChart(Charts):
             title=self.title,
             xaxis_title=self.x_category,
             yaxis_title=self.y_category,
-            width=800,
-            height=600
+            width=self.width,
+            height=self.heigth
         )
 
         st.plotly_chart(fig)
@@ -337,10 +347,12 @@ class HeatmapChart(Charts):
         print("Anzeigen als Heatmap")
 
 class IcicleChart(Charts):
-    def __init__(self, title, data, list_categories, values):
-        super().__init__(title, data)
+    def __init__(self, title, data, list_categories, values, width=800, height=600):
+        super().__init__(title, data, width, height)
         self.values = values #TODO testen in dekalytics df[col] = df[col].clip(lower=0)
         self.category = list_categories
+        self.width = width
+        self.heigth = height
     
     def plot(self):
         print(self.category)
@@ -351,7 +363,7 @@ class IcicleChart(Charts):
         print(self.values)
         fig = px.icicle(self.data, values=self.values, path=self.category, title=self.title, color_discrete_sequence=self.colorset)
         fig.update_traces(root_color="lightgrey")
-        fig.update_layout(width=800, height=600)
+        fig.update_layout(width=self.width, height=self.heigth)
         st.plotly_chart(fig)
 
         print("Anzeigen als Icicle")

@@ -75,4 +75,4 @@ if uploaded_files:
 
 
         quotes_indexed = (quotes / quotes.iloc[0]) * 100
-        LineChart('Line Chart',quotes_indexed,y_values=quotes_indexed.columns,x_values=quotes_indexed.index).plot()
+        LineChart('Line Chart',quotes_indexed,y_values=quotes_indexed.columns,x_values=quotes_indexed.index,width=1600).plot()
